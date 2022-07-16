@@ -1,2 +1,1 @@
-make renaming without rewriting
-make defaults for editor (-v for vim, -n for nano)
+make renaming without collisions
