@@ -16,7 +16,8 @@
 struct _InputData
 {
 	/* input */
-	GList *filename_list;
+	gchar **filenames;
+	gsize filenames_num;
 
 	/* options */
 	gchar *editor;
@@ -39,7 +40,7 @@ get_program_summary(
 
 	summary = g_strdup_printf(
 		"This program renames FILES with an external editor.\n"
-		"Argument EDITOR, option in \'%s\', value of $VISUAL or $EDITOR in this order determines the editor.",
+		"Argument EDITOR, option in \'%s\', value of $VISUAL or $EDITOR in this order determine the editor.",
 		conf_path );
 	g_free( conf_path );
 
@@ -52,8 +53,9 @@ parse_input(
 	gchar **argv,
 	InputData *input_data )
 {
-	guint i;
-	GList *filename_list;
+	gsize i;
+	gchar **filenames;
+	gsize filenames_num;
 	gchar *editor, *summary;
 	GOptionContext *context;
 	gboolean ret = TRUE;
@@ -95,12 +97,15 @@ parse_input(
 	}
 
 	/* get input */
-	if( input_data->filename_list == NULL )
+	if( input_data->filenames_num == 0 )
 	{
-		filename_list = NULL;
+		filenames_num = argc - 1;
+		filenames = g_new( gchar*, filenames_num );
 		for( i = 1; i < argc; ++i )
-			filename_list = g_list_prepend( filename_list, g_strdup( argv[i] ) );
-		input_data->filename_list = g_list_reverse( filename_list );
+			filenames[i-1] = g_strdup( argv[i] );
+
+		input_data->filenames = filenames;
+		input_data->filenames_num = filenames_num;
 	}
 
 	if( input_data->editor == NULL )
@@ -172,13 +177,15 @@ get_input_data(
 	gint argc,
 	char **argv )
 {
+	gsize i;
 	InputData *input_data;
 
 	g_return_val_if_fail( argc >=0, NULL );
 	g_return_val_if_fail( argv != NULL, NULL );
 
 	input_data = g_new( InputData, 1 );
-	input_data->filename_list = NULL;
+	input_data->filenames = NULL;
+	input_data->filenames_num = 0;
 	input_data->editor = NULL;
 
 	if( !parse_input( argc, argv, input_data ) )
@@ -198,7 +205,9 @@ get_input_data(
 	return input_data;
 
 failed:
-	g_list_free_full( input_data->filename_list, (GDestroyNotify)g_free );
+	for( i = 0; i < input_data->filenames_num; ++i )
+		g_free( input_data->filenames[i] );
+	g_free( input_data->filenames );
 	g_free( input_data->editor );
 	g_free( input_data );
 
@@ -252,19 +261,21 @@ create_temp_file(
 }
 
 static gboolean
-write_filename_list_to_tmp_file(
+write_filenames_to_tmp_file(
 	GFile *tmp_file,
-	GList *filename_list )
+	gchar **filenames,
+	gsize filenames_num )
 {
 	GFileOutputStream *file_output_stream;
 	GDataOutputStream *data_output_stream;
-	GList *l;
+	gsize i;
 	gchar *s;
 	gboolean ret = TRUE;
 	GError *error = NULL;
 
 	g_return_val_if_fail( tmp_file != NULL, FALSE );
-	g_return_val_if_fail( filename_list != NULL, FALSE );
+	g_return_val_if_fail( filenames != NULL, FALSE );
+	g_return_val_if_fail( filenames_num >= 0, FALSE );
 
 	file_output_stream = g_file_replace( tmp_file, NULL, FALSE, G_FILE_CREATE_PRIVATE, NULL, &error );
 	if( error != NULL )
@@ -277,9 +288,9 @@ write_filename_list_to_tmp_file(
 	}
 
 	data_output_stream = g_data_output_stream_new( G_OUTPUT_STREAM( file_output_stream ) );
-	for( l = filename_list; l != NULL; l = l->next )
+	for( i = 0; i < filenames_num; ++i )
 	{
-		s = g_strdup_printf( "%s\n", (gchar*)l->data );
+		s = g_strdup_printf( "%s\n", filenames[i] );
 		g_data_output_stream_put_string( data_output_stream, s, NULL, &error );
 		g_free( s );
 		if( error != NULL )
@@ -344,19 +355,24 @@ system_call(
 	return ret;
 }
 
-static GList*
-get_output_filename_list(
+static gchar**
+get_output_filenames(
 	GFile *tmp_file,
+	gsize input_filenames_num,
+	gsize *output_filenames_num,
 	GError **error )
 {
+	gsize i;
 	GFileInputStream *file_stream;
 	GDataInputStream *data_stream;
 	gchar *filename;
-	GList *filename_list;
-	gsize size;
+	gchar **filenames;
+	gsize filenames_num, size;
 	GError *local_error = NULL;
 
 	g_return_val_if_fail( tmp_file != NULL, FALSE );
+	g_return_val_if_fail( input_filenames_num >= 0, FALSE );
+	g_return_val_if_fail( output_filenames_num != NULL, FALSE );
 	g_return_val_if_fail( error != NULL, FALSE );
 
 	file_stream = g_file_read( tmp_file, NULL, &local_error );
@@ -367,53 +383,66 @@ get_output_filename_list(
 	}
 
 	data_stream = g_data_input_stream_new( G_INPUT_STREAM( file_stream ) );
-	filename_list = NULL;
-	while( TRUE )
+	filenames = g_new( gchar*, input_filenames_num );
+	filenames_num = 0;
+	while( filenames_num <= input_filenames_num )
 	{
 		filename = g_data_input_stream_read_line( data_stream, &size, NULL, &local_error );
 		if( local_error != NULL )
 		{
 			g_propagate_error( error, local_error );
-			g_list_free_full( filename_list, (GDestroyNotify)g_free );
-			filename_list = NULL;
+
+			for( i = 0; i < filenames_num; ++i )
+				g_free( filenames[i] );
+			g_free( filenames );
+			filenames = NULL;
+			filenames_num = 0;
 			break;
 		}
 
 		if( filename == NULL )
 			break;
 
-		filename_list = g_list_prepend( filename_list, filename );
+		filenames[filenames_num++] = filename;
 	}
 
 	g_object_unref( G_OBJECT( data_stream ) );
 	g_object_unref( G_OBJECT( file_stream ) );
 
-	return g_list_reverse( filename_list );
+	*output_filenames_num = filenames_num;
+	return filenames;
 }
 
 static gboolean
-move_files_by_filename_lists(
-	GList *input_filename_list,
-	GList *output_filename_list )
+move_files_by_filenames(
+	gchar **input_filenames,
+	gsize input_filenames_num,
+	gchar **output_filenames,
+	gsize output_filenames_num )
 {
-	GList *l, *il, *ol;
-	GList *input_file_list, *output_file_list, *tmp_file_list;
-	GFile *input_file, *output_file, *tmp_file, *dir;
+	gsize i, filenames_num, files_num;
+	GFile *input_file, *output_file, *tmp_file;
+	GFile **input_files, **output_files, **tmp_files, *dir;
 	gchar *dirname;
 	gboolean ret = TRUE;
 	GError *error = NULL;
 
-	g_return_val_if_fail( input_filename_list != NULL, FALSE );
-	g_return_val_if_fail( output_filename_list != NULL, FALSE );
+	g_return_val_if_fail( input_filenames != NULL, FALSE );
+	g_return_val_if_fail( input_filenames_num >= 0, FALSE );
+	g_return_val_if_fail( output_filenames != NULL, FALSE );
+	g_return_val_if_fail( output_filenames_num >= 0, FALSE );
 
-	/* prepare file lists */
-	input_file_list = NULL;
-	output_file_list = NULL;
-	tmp_file_list = NULL;
-	for( il = input_filename_list, ol = output_filename_list; il != NULL && ol != NULL; il = il->next, ol = ol->next )
+	filenames_num = MIN( input_filenames_num, output_filenames_num );
+
+	/* prepare file arrays */
+	input_files = g_new( GFile*, filenames_num );
+	output_files = g_new( GFile*, filenames_num );
+	tmp_files = g_new( GFile*, filenames_num );
+	files_num = 0;
+	for( i = 0; i < filenames_num; ++i )
 	{
-		input_file = g_file_new_for_path( (gchar*)il->data );
-		output_file = g_file_new_for_path( (gchar*)ol->data );
+		input_file = g_file_new_for_path( input_filenames[i] );
+		output_file = g_file_new_for_path( output_filenames[i] );
 
 		/* exclude the same files */
 		if( g_file_equal( input_file, output_file ) )
@@ -423,8 +452,8 @@ move_files_by_filename_lists(
 			continue;
 		}
 
-		input_file_list = g_list_prepend( input_file_list, input_file );
-		output_file_list = g_list_prepend( output_file_list, output_file );
+		input_files[files_num] = input_file;
+		output_files[files_num] = output_file;
 
 		/* create temporary file to prevent collisions */
 		dir = g_file_get_parent( input_file );
@@ -432,39 +461,69 @@ move_files_by_filename_lists(
 		g_object_unref( G_OBJECT( dir ) );
 		tmp_file = create_temp_file( dirname );
 		g_free( dirname );
-		g_object_ref( G_OBJECT( tmp_file ) );/* temporary file will be unrefed by input and ouput file lists */
+		tmp_files[files_num] = tmp_file;
 
-		tmp_file_list = g_list_prepend( tmp_file_list, tmp_file );
+		files_num++;
 	}
-	tmp_file_list = g_list_reverse( tmp_file_list );
-	input_file_list = g_list_concat( g_list_reverse( input_file_list ), g_list_copy( tmp_file_list ) );
-	output_file_list = g_list_concat( g_list_copy( tmp_file_list ), g_list_reverse( output_file_list ) );
 
 	/* move files */
-	for( il = input_file_list, ol = output_file_list; il != NULL && ol != NULL; il = il->next, ol = ol->next )
+	for( i = 0; i < files_num; ++i )
 	{
-		input_file = G_FILE( il->data );
-		output_file = G_FILE( ol->data );
-		g_file_move( input_file, output_file, G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, &error );
+		g_file_move( input_files[i], tmp_files[i], G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, &error );
 		if( error != NULL )
 		{
 			g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 				"MESSAGE", error->message,
 				NULL );
 			g_clear_error( &error );
+			ret = FALSE;
+			goto out;
+		}
+	}
+	for( i = 0; i < files_num; ++i )
+	{
+		dir = g_file_get_parent( output_files[i] );
+		g_file_make_directory_with_parents( dir, NULL, &error );
+		g_object_unref( G_OBJECT( dir ) );
+		if( error != NULL && error->code != G_IO_ERROR_EXISTS )
+		{
+			g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+				"MESSAGE", error->message,
+				NULL );
+			g_clear_error( &error );
+			ret = FALSE;
+			break;
+		}
+		if( error != NULL && error->code == G_IO_ERROR_EXISTS )
+			g_clear_error( &error );
 
-			/* on error, delete all temporary files */
-			for( l = tmp_file_list; l != NULL; l = l->next )
-				g_file_delete( G_FILE( l->data ), NULL, NULL );
-
+		g_file_move( tmp_files[i], output_files[i], G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, &error );
+		if( error != NULL )
+		{
+			g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+				"MESSAGE", error->message,
+				NULL );
+			g_clear_error( &error );
 			ret = FALSE;
 			break;
 		}
 	}
 
-	g_list_free_full( input_file_list, (GDestroyNotify)g_object_unref );
-	g_list_free_full( output_file_list, (GDestroyNotify)g_object_unref );
-	g_list_free( tmp_file_list );
+out:
+	/* on error: delete all temporary files */
+	if( !ret )
+			for( i = 0; i < files_num; ++i )
+				g_file_delete( tmp_files[i], NULL, NULL );
+
+	for( i = 0; i < files_num; ++i )
+	{
+		g_object_unref( G_OBJECT( input_files[i] ) );
+		g_object_unref( G_OBJECT( output_files[i] ) );
+		g_object_unref( G_OBJECT( tmp_files[i] ) );
+	}
+	g_free( input_files );
+	g_free( output_files );
+	g_free( tmp_files );
 
 	return ret;
 }
@@ -474,8 +533,10 @@ main(
 	int argc,
 	char *argv[] )
 {
+	gsize i;
 	InputData *input_data;
-	GList *input_filename_list, *output_filename_list;
+	gchar **input_filenames, **output_filenames;
+	gsize input_filenames_num, output_filenames_num;
 	gchar *editor;
 	GFile *tmp_file;
 	guint ret = EXIT_SUCCESS;
@@ -488,7 +549,8 @@ main(
 	input_data = get_input_data( argc, argv );
 	if( input_data == NULL )
 		return EXIT_FAILURE;
-	input_filename_list = input_data->filename_list;
+	input_filenames = input_data->filenames;
+	input_filenames_num = input_data->filenames_num;
 	editor = input_data->editor;
 	g_free( input_data );
 
@@ -500,8 +562,8 @@ main(
 		goto out1;
 	}
 
-	/* write input filename list to temporary file */
-	if( !write_filename_list_to_tmp_file( tmp_file, input_filename_list ) )
+	/* write input filename array to temporary file */
+	if( !write_filenames_to_tmp_file( tmp_file, input_filenames, input_filenames_num ) )
 	{
 		ret = EXIT_FAILURE;
 		goto out2;
@@ -514,8 +576,9 @@ main(
 		goto out2;
 	}
 
-	/* get output file list */
-	output_filename_list = get_output_filename_list( tmp_file, &error );
+	/* get output file array */
+	output_filenames_num = 0;
+	output_filenames = get_output_filenames( tmp_file, input_filenames_num, &output_filenames_num, &error );
 	if( error != NULL )
 	{
 		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
@@ -527,10 +590,12 @@ main(
 	}
 
 	/* move files */
-	if( !move_files_by_filename_lists( input_filename_list, output_filename_list ) )
+	if( !move_files_by_filenames( input_filenames, input_filenames_num, output_filenames, output_filenames_num ) )
 		ret = EXIT_FAILURE;
 
-	g_list_free_full( output_filename_list, (GDestroyNotify)g_free );
+	for( i = 0; i < output_filenames_num; ++i )
+		g_free( output_filenames[i] );
+	g_free( output_filenames );
 
 out2:
 	g_file_delete( tmp_file, NULL, &error );
@@ -545,7 +610,9 @@ out2:
 	g_object_unref( G_OBJECT( tmp_file ) );
 
 out1:
-	g_list_free_full( input_filename_list, (GDestroyNotify)g_free );
+	for( i = 0; i < input_filenames_num; ++i )
+		g_free( input_filenames[i] );
+	g_free( input_filenames );
 	g_free( editor );
 
 	return ret;
