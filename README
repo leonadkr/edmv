@@ -1,10 +1,16 @@
-This program renames list of input file names using an external editor.
-The editor can be determined by the command line argument -e or --editor, by name or path in config file 'XDG_CONFIG_HOME/.edmv/config' or by value of $VISUAL or $EDITOR.
+This program renames list of input files using an external editor.
+The editor can be determined by the command line argument -e or --editor, by name or path in config file 'XDG_CONFIG_HOME/.edmv/config' or by value of $VISUAL or $EDITOR, in this order.
 
-The program uses glib, also you need cmake to build the program.
+XDG_CONFIG_HOME/.edmv/config is a text file and looks like:
+	[Main]
+	editor = nano
+
+Be aware: the program overwrites the files!
+
+The program uses glib, also you need cmake to build it.
 
 To build:
 cmake -S edmv -B /tmp/edmv/release -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_TOOLCHAIN_FILE=GlibToolChain.cmake
 
 To install:
-cmake --build /tmp/edmv/release --config Relese --target install DESTDIR=$HOME/.local
+cmake --build /tmp/edmv/release --config Release --target install DESTDIR=$HOME/.local
