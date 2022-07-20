@@ -512,8 +512,8 @@ move_files_by_filenames(
 out:
 	/* on error: delete all temporary files */
 	if( !ret )
-			for( i = 0; i < files_num; ++i )
-				g_file_delete( tmp_files[i], NULL, NULL );
+		for( i = 0; i < files_num; ++i )
+			g_file_delete( tmp_files[i], NULL, NULL );
 
 	for( i = 0; i < files_num; ++i )
 	{
