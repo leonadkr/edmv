@@ -607,6 +607,12 @@ main(
 		ret = EXIT_FAILURE;
 		goto out2;
 	}
+	/* no output file names -- nothing to do */
+	if( output_filenames_num == 0 )
+	{
+		ret = EXIT_SUCCESS;
+		goto out2;
+	}
 
 	/* move files */
 	if( !move_files_by_filenames( input_filenames, input_filenames_num, output_filenames, output_filenames_num ) )
