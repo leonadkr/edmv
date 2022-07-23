@@ -252,7 +252,7 @@ create_temp_file(
 	if( count == count_max )
 	{
 		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
-			"MESSAGE", "Can not create a temporary file",
+			"MESSAGE", "Can not create a temporary file in directory \'\'", dirname,
 			NULL );
 		return NULL;
 	}
@@ -420,9 +420,10 @@ move_files_by_filenames(
 	gchar **output_filenames,
 	gsize output_filenames_num )
 {
-	gsize i, filenames_num, files_num;
-	GFile *input_file, *output_file, *tmp_file;
-	GFile **input_files, **output_files, **tmp_files, *dir;
+	gsize i, tmped_files_num, moved_files_num;
+	gsize filenames_num, files_num;
+	GFile *input_file, *output_file, *tmp_file, *dir;
+	GFile **input_files, **output_files, **tmp_files;
 	gchar *dirname;
 	gboolean ret = TRUE;
 	GError *error = NULL;
@@ -432,9 +433,8 @@ move_files_by_filenames(
 	g_return_val_if_fail( output_filenames != NULL, FALSE );
 	g_return_val_if_fail( output_filenames_num >= 0, FALSE );
 
-	filenames_num = MIN( input_filenames_num, output_filenames_num );
-
 	/* prepare file arrays */
+	filenames_num = MIN( input_filenames_num, output_filenames_num );
 	input_files = g_new( GFile*, filenames_num );
 	output_files = g_new( GFile*, filenames_num );
 	tmp_files = g_new( GFile*, filenames_num );
@@ -452,21 +452,28 @@ move_files_by_filenames(
 			continue;
 		}
 
-		input_files[files_num] = input_file;
-		output_files[files_num] = output_file;
-
 		/* create temporary file to prevent collisions */
 		dir = g_file_get_parent( input_file );
 		dirname = g_file_get_path( dir );
 		g_object_unref( G_OBJECT( dir ) );
 		tmp_file = create_temp_file( dirname );
 		g_free( dirname );
+		if( tmp_file == NULL )
+		{
+			g_object_unref( G_OBJECT( input_file ) );
+			g_object_unref( G_OBJECT( output_file ) );
+			goto out;
+		}
+
+		input_files[files_num] = input_file;
+		output_files[files_num] = output_file;
 		tmp_files[files_num] = tmp_file;
 
 		files_num++;
 	}
 
-	/* move files */
+	/* move input files to temporary files */
+	tmped_files_num = 0;
 	for( i = 0; i < files_num; ++i )
 	{
 		g_file_move( input_files[i], tmp_files[i], G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, &error );
@@ -479,12 +486,18 @@ move_files_by_filenames(
 			ret = FALSE;
 			goto out;
 		}
+
+		tmped_files_num++;
 	}
+
+	/* move temporary files to output files */
+	moved_files_num = 0;
 	for( i = 0; i < files_num; ++i )
 	{
 		dir = g_file_get_parent( output_files[i] );
 		g_file_make_directory_with_parents( dir, NULL, &error );
 		g_object_unref( G_OBJECT( dir ) );
+		/* DIRECTORY EXISTS is not treated as an error */
 		if( error != NULL && error->code != G_IO_ERROR_EXISTS )
 		{
 			g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
@@ -507,13 +520,19 @@ move_files_by_filenames(
 			ret = FALSE;
 			break;
 		}
+
+		moved_files_num++;
 	}
 
 out:
-	/* on error: delete all temporary files */
+	/* on error: try to restore original file names */
 	if( !ret )
-		for( i = 0; i < files_num; ++i )
-			g_file_delete( tmp_files[i], NULL, NULL );
+	{
+		for( i = 0; i < moved_files_num; ++i )
+			g_file_move( output_files[i], tmp_files[i], G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, NULL );
+		for( i = 0; i < tmped_files_num; ++i )
+			g_file_move( tmp_files[i], input_files[i], G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, NULL );
+	}
 
 	for( i = 0; i < files_num; ++i )
 	{
@@ -593,6 +612,7 @@ main(
 	if( !move_files_by_filenames( input_filenames, input_filenames_num, output_filenames, output_filenames_num ) )
 		ret = EXIT_FAILURE;
 
+	/* release memory */
 	for( i = 0; i < output_filenames_num; ++i )
 		g_free( output_filenames[i] );
 	g_free( output_filenames );
