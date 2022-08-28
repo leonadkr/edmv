@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.16 )
 
-project( edmv VERSION 1.0.0 LANGUAGES C )
+project( edmv VERSION 1.0.1 LANGUAGES C )
 
 find_package( PkgConfig REQUIRED )
 pkg_check_modules( GLIB2 REQUIRED glib-2.0 )

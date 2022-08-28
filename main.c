@@ -252,7 +252,7 @@ create_temp_file(
 	if( count == count_max )
 	{
 		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
-			"MESSAGE", "Can not create a temporary file in directory \'\'", dirname,
+			"MESSAGE", "Can not create a temporary file in directory \'%s\'", dirname,
 			NULL );
 		return NULL;
 	}
@@ -420,7 +420,7 @@ move_files_by_filenames(
 	gchar **output_filenames,
 	gsize output_filenames_num )
 {
-	gsize i, tmped_files_num, moved_files_num;
+	gsize i, tmped_files_num = 0, moved_files_num = 0;
 	gsize filenames_num, files_num;
 	GFile *input_file, *output_file, *tmp_file, *dir;
 	GFile **input_files, **output_files, **tmp_files;
