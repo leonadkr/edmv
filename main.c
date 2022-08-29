@@ -223,6 +223,7 @@ create_temp_file(
 	const gchar name_sep[] = "-";
 
 	GFile *file;
+	GFileOutputStream *file_stream;
 	gsize count;
 	gchar *date_time_str, *count_str, *filename;
 	GDateTime *date_time;
@@ -241,8 +242,12 @@ create_temp_file(
 		g_free( count_str );
 		g_free( filename );
 
-		if( g_file_create( file, G_FILE_CREATE_PRIVATE, NULL, NULL ) != NULL )
+		file_stream = g_file_create( file, G_FILE_CREATE_PRIVATE, NULL, NULL );
+		if( file_stream != NULL )
+		{
+			g_object_unref( G_OBJECT( file_stream ) );
 			break;
+		}
 
 		g_clear_object( &file );
 	}
