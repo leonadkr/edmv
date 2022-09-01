@@ -4,15 +4,9 @@
 #include <locale.h>
 #include "config.h"
 
-/*
-	definitions
-*/
+
 #define CONF_FILE "config"
 
-
-/*
-	structures
-*/
 struct _InputData
 {
 	/* input */
@@ -25,9 +19,6 @@ struct _InputData
 typedef struct _InputData InputData;
 
 
-/*
-	private
-*/
 static gchar*
 get_program_summary(
 	void )
@@ -159,9 +150,9 @@ parse_env(
 
 	g_return_val_if_fail( input_data != NULL, FALSE );
 
-	/* try some environment variables */
 	if( input_data->editor == NULL )
 	{
+		/* try some environment variables */
 		editor = g_strdup( g_getenv( "VISUAL" ) );
 		if( editor == NULL )
 			editor = g_strdup( g_getenv( "EDITOR" ) );
@@ -551,6 +542,7 @@ out:
 
 	return ret;
 }
+
 
 int
 main(
