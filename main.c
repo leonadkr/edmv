@@ -78,7 +78,14 @@ parse_input(
 		goto out;
 	}
 
-	if( argc == 1 )
+	/* count input file names */
+	/* ignoring "." and ".." */
+	for( filenames_num = 0, i = 1; i < argc; ++i )
+		if( g_strcmp0( argv[i], "." ) != 0 && g_strcmp0( argv[i], ".." ) != 0 )
+			filenames_num++;
+
+	/* nothing to do */
+	if( filenames_num == 0 )
 	{
 		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", "No input file names",
@@ -87,13 +94,13 @@ parse_input(
 		goto out;
 	}
 
-	/* get input */
+	/* get input if not done yet */
 	if( input_data->filenames_num == 0 )
 	{
-		filenames_num = argc - 1;
 		filenames = g_new( gchar*, filenames_num );
-		for( i = 1; i < argc; ++i )
-			filenames[i-1] = g_strdup( argv[i] );
+		for( filenames_num = 0, i = 1; i < argc; ++i )
+			if( g_strcmp0( argv[i], "." ) != 0 && g_strcmp0( argv[i], ".." ) != 0 )
+				filenames[filenames_num++] = g_strdup( argv[i] );
 
 		input_data->filenames = filenames;
 		input_data->filenames_num = filenames_num;
