@@ -1,7 +1,7 @@
 This program renames list of input files using an external editor.
-The editor can be determined by the command line argument -e or --editor, by name or path in config file 'XDG_CONFIG_HOME/.edmv/config' or by value of $VISUAL or $EDITOR, in this order.
+The editor can be determined by the command line argument -e or --editor, by name or path in config file '$XDG_CONFIG_HOME/.edmv/config' or by value of $VISUAL or $EDITOR, in this order.
 
-XDG_CONFIG_HOME/.edmv/config is a text file and looks like:
+$XDG_CONFIG_HOME/.edmv/config is a text file and looks like:
 	[Main]
 	editor = nano
 

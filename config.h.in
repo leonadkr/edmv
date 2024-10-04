@@ -2,6 +2,13 @@
 #define CONFIG_H
 
 #define PROGRAM_NAME "@PROGRAM_NAME@"
+#define PROGRAM_VERSION "@PROGRAM_VERSION@"
+
+#define APP_ID "com.gmail.leonadkr.edmv"
+
+#define CONFIG_FILENAME "config"
+
+#define TEXT_FILE_LINE_BREAKER "@TEXT_FILE_LINE_BREAKER@"
 
 #endif
 
