@@ -46,7 +46,7 @@ edmv_application_init(
 
 	summary = g_strdup_printf(
 		"This program renames FILES with an external editor." TEXT_FILE_LINE_BREAKER
-		"Be aware of entering \'.\' and \'..\' in the unput, it may cause an uncertain behavior." TEXT_FILE_LINE_BREAKER
+		"Be aware of entering \'.\' and \'..\' in the input, it may cause an uncertain behavior." TEXT_FILE_LINE_BREAKER
 		"Argument EDITOR, option in \'%s\', value of $VISUAL or $EDITOR in this order determine the editor.",
 		self->config_path );
 
