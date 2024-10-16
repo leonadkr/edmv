@@ -12,7 +12,7 @@ G_DECLARE_FINAL_TYPE( EdmvApplication, edmv_application, EDMV, APPLICATION, GApp
 
 EdmvApplication* edmv_application_new( const gchar *application_id );
 gchar* edmv_application_get_editor( EdmvApplication *self );
-GVariant* edmv_application_get_inputs( EdmvApplication *self );
+GStrv edmv_application_get_inputs( EdmvApplication *self );
 
 G_END_DECLS
 

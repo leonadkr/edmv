@@ -11,7 +11,7 @@ struct _EdmvApplication
 	gchar *config_path;
 
 	gchar *editor;
-	GVariant *inputs;
+	GStrv inputs;
 };
 typedef struct _EdmvApplication EdmvApplication;
 
@@ -61,17 +61,6 @@ edmv_application_init(
 }
 
 static void
-edmv_application_dispose(
-	GObject *object )
-{
-	EdmvApplication *self = EDMV_APPLICATION( object );
-
-	g_clear_pointer( &self->inputs, g_variant_unref );
-
-	G_OBJECT_CLASS( edmv_application_parent_class )->dispose( object );
-}
-
-static void
 edmv_application_finalize(
 	GObject *object )
 {
@@ -79,6 +68,7 @@ edmv_application_finalize(
 
 	g_free( self->config_path );
 	g_free( self->editor );
+	g_strfreev( self->inputs );
 
 	G_OBJECT_CLASS( edmv_application_parent_class )->finalize( object );
 }
@@ -98,7 +88,7 @@ edmv_application_get_property(
 			g_value_set_string( value, self->editor );
 			break;
 		case PROP_INPUTS:
-			g_value_set_variant( value, self->inputs );
+			g_value_set_boxed( value, self->inputs );
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID( object, prop_id, pspec );
@@ -154,9 +144,9 @@ edmv_application_command_line(
 			argv[i] = s_utf8;
 		}
 	}
-	g_clear_pointer( &self->inputs, g_variant_unref );
-	self->inputs = g_variant_new_strv( (const gchar* const*)argv + 1, argc - 1 );
-	g_strfreev( argv );
+	self->inputs = g_memdup2( argv + 1, argc * sizeof( char* ) );
+	g_free( argv[0] );
+	g_free( argv );
 
 	/* try environment variables */
 	if( editor == NULL )
@@ -190,7 +180,6 @@ edmv_application_class_init(
 	GObjectClass *object_class = G_OBJECT_CLASS( klass );
 	GApplicationClass *app_class = G_APPLICATION_CLASS( klass );
 
-	object_class->dispose = edmv_application_dispose;
 	object_class->finalize = edmv_application_finalize;
 	object_class->get_property = edmv_application_get_property;
 	object_props[PROP_EDITOR] = g_param_spec_string(
@@ -198,14 +187,13 @@ edmv_application_class_init(
 		"Editor",
 		"The editor to modify an input file list",
 		NULL,
-		G_PARAM_READABLE );
-	object_props[PROP_INPUTS] = g_param_spec_variant(
+		G_PARAM_READABLE | G_PARAM_STATIC_STRINGS );
+	object_props[PROP_INPUTS] = g_param_spec_boxed(
 		"inputs",
 		"Inputs",
-		"GVariant containing an array of input strings (G_VARIANT_TYPE( \"as\" ))",
-		G_VARIANT_TYPE( "as" ),
-		NULL,
-		G_PARAM_READABLE );
+		"GStrv containing input strings",
+		G_TYPE_STRV,
+		G_PARAM_READABLE | G_PARAM_STATIC_STRINGS );
 	g_object_class_install_properties( object_class, N_PROPS, object_props );
 
 	app_class->command_line = edmv_application_command_line;
@@ -229,12 +217,12 @@ edmv_application_get_editor(
 	return g_strdup( self->editor );
 }
 
-GVariant*
+GStrv
 edmv_application_get_inputs(
 	EdmvApplication *self )
 {
 	g_return_val_if_fail( EDMV_IS_APPLICATION( self ), NULL );
 
-	return self->inputs;
+	return g_strdupv( self->inputs );
 }
 

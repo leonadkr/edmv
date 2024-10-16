@@ -317,10 +317,8 @@ on_app_activate(
 	gpointer user_data )
 {
 	EdmvApplication *self = EDMV_APPLICATION( app );
-	GVariant *inputs;
 	gchar *editor;
 	GStrv input_filepaths, output_filepaths;
-	gsize input_filepaths_len;
 	GFile *tmp_file;
 	GError *error = NULL;
 
@@ -335,12 +333,16 @@ on_app_activate(
 	}
 
 	/* no inputs -- do nothing */
-	inputs = edmv_application_get_inputs( self );
-	if( inputs == NULL )
+	input_filepaths = edmv_application_get_inputs( self );
+	if( input_filepaths == NULL )
 		goto out1;
-	input_filepaths = (GStrv)g_variant_get_strv( inputs, &input_filepaths_len );
-	if( input_filepaths_len == 0 )
-		goto out1;
+	if( g_strv_length( input_filepaths ) == 0 )
+		goto out2;
+
+	GStrv a;
+	g_print( "length: %d\n", g_strv_length( input_filepaths ) );
+	for( a = input_filepaths; *a != NULL; a++ )
+		g_print( "%s\n", *a );
 
 	/* create temporary file */
 	tmp_file = create_temp_file( g_get_tmp_dir(), &error );
@@ -386,8 +388,10 @@ on_app_activate(
 		goto out3;
 	}
 	/* no output filepaths -- do nothing */
-	if( g_strv_length( output_filepaths ) == 0 )
+	if( output_filepaths == NULL )
 		goto out3;
+	if( g_strv_length( output_filepaths ) == 0 )
+		goto out4;
 
 	/* move files */
 	move_files_by_filepaths( input_filepaths, output_filepaths, &error );
@@ -399,7 +403,7 @@ on_app_activate(
 		g_clear_error( &error );
 	}
 
-	/* release memory */
+out4:
 	g_strfreev( output_filepaths );
 
 out3:
@@ -414,7 +418,7 @@ out3:
 	g_object_unref( G_OBJECT( tmp_file ) );
 
 out2:
-	g_free( input_filepaths );
+	g_strfreev( input_filepaths );
 
 out1:
 	g_free( editor );
