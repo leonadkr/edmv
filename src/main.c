@@ -339,11 +339,6 @@ on_app_activate(
 	if( g_strv_length( input_filepaths ) == 0 )
 		goto out2;
 
-	GStrv a;
-	g_print( "length: %d\n", g_strv_length( input_filepaths ) );
-	for( a = input_filepaths; *a != NULL; a++ )
-		g_print( "%s\n", *a );
-
 	/* create temporary file */
 	tmp_file = create_temp_file( g_get_tmp_dir(), &error );
 	if( error != NULL )
