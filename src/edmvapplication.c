@@ -144,7 +144,7 @@ edmv_application_command_line(
 			argv[i] = s_utf8;
 		}
 	}
-	self->inputs = g_memdup2( argv + 1, argc * sizeof( char* ) );
+	self->inputs = g_memdup2( argv + 1, argc * sizeof( gchar* ) );
 	g_free( argv[0] );
 	g_free( argv );
 

@@ -23,7 +23,7 @@ create_temp_file(
 	GError **error )
 {
 	const gsize count_max = 9999;
-	const gchar count_fmt[] = "%04zu";
+	const gchar count_fmt[] = "%04" G_GSIZE_FORMAT;
 	const gchar name_sep[] = "-";
 
 	GFile *file;
