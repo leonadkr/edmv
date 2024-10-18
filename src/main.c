@@ -429,6 +429,8 @@ main(
 
 	setlocale( LC_ALL, "" );
 
+	g_set_prgname( PROGRAM_NAME );
+
 	app = edmv_application_new( APP_ID );
 	if( app == NULL )
 		return EXIT_FAILURE;
