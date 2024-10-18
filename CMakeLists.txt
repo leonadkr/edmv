@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.16 )
 
-project( edmv VERSION 1.1.1 )
+project( edmv VERSION 1.1.2 )
 
 if( CMAKE_HOST_WIN32 )
 	set( TEXT_FILE_LINE_BREAKER "\\r\\n" )
