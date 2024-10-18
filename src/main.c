@@ -1,9 +1,11 @@
-#include <glib.h>
-#include <gio/gio.h>
-#include <glib/gi18n.h>
-#include <locale.h>
 #include "config.h"
 #include "edmvapplication.h"
+
+#include <gio/gio.h>
+#include <glib.h>
+#include <glib/gi18n.h>
+
+#include <locale.h>
 
 enum _EdmvError
 {

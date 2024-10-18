@@ -1,9 +1,9 @@
 #ifndef EDMVAPPLICATION_H
 #define EDMVAPPLICATION_H
 
+#include <gio/gio.h>
 #include <glib.h>
 #include <glib-object.h>
-#include <gio/gio.h>
 
 G_BEGIN_DECLS
 

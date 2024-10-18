@@ -1,8 +1,10 @@
+#include "edmvapplication.h"
+
+#include "config.h"
+
+#include <gio/gio.h>
 #include <glib.h>
 #include <glib-object.h>
-#include <gio/gio.h>
-#include "config.h"
-#include "edmvapplication.h"
 
 struct _EdmvApplication
 {
