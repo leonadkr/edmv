@@ -13,4 +13,4 @@ To build:
 cmake -S edmv -B /tmp/edmv/release -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_TOOLCHAIN_FILE=GlibToolChain.cmake
 
 To install:
-DESTDIR=$HOME/.local cmake --build /tmp/edmv/release --config Release --target install
+DESTDIR=$HOME/.local cmake --build /tmp/edmv/release --config Release --target install/strip
