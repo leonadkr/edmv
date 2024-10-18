@@ -131,7 +131,7 @@ edmv_application_command_line(
 			s_utf8 = g_locale_to_utf8( s_locale, -1, NULL, NULL, &error );
 			if( error != NULL )
 			{
-				g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+				g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 					"MESSAGE", error->message,
 					NULL );
 				g_clear_error( &error );

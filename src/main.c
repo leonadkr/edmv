@@ -326,7 +326,7 @@ on_app_activate(
 	editor = edmv_application_get_editor( self );
 	if( editor == NULL )
 	{
-		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", "Editor is not set",
 			NULL );
 		return;
@@ -343,7 +343,7 @@ on_app_activate(
 	tmp_file = create_temp_file( g_get_tmp_dir(), &error );
 	if( error != NULL )
 	{
-		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", error->message,
 			NULL );
 		g_clear_error( &error );
@@ -354,7 +354,7 @@ on_app_activate(
 	write_filepaths_to_tmp_file( input_filepaths, tmp_file, &error );
 	if( error != NULL )
 	{
-		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", error->message,
 			NULL );
 		g_clear_error( &error );
@@ -365,7 +365,7 @@ on_app_activate(
 	system_call( editor, tmp_file, &error );
 	if( error != NULL )
 	{
-		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", error->message,
 			NULL );
 		g_clear_error( &error );
@@ -376,7 +376,7 @@ on_app_activate(
 	output_filepaths = get_output_filepaths( tmp_file, &error );
 	if( error != NULL )
 	{
-		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", error->message,
 			NULL );
 		g_clear_error( &error );
@@ -392,7 +392,7 @@ on_app_activate(
 	move_files_by_filepaths( input_filepaths, output_filepaths, &error );
 	if( error != NULL )
 	{
-		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", error->message,
 			NULL );
 		g_clear_error( &error );
@@ -405,7 +405,7 @@ out3:
 	g_file_delete( tmp_file, NULL, &error );
 	if( error != NULL )
 	{
-		g_log_structured( G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", error->message,
 			NULL );
 		g_clear_error( &error );
