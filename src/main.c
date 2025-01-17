@@ -24,14 +24,15 @@ create_temp_file(
 	const gchar *dirpath,
 	GError **error )
 {
-	const gsize count_max = 9999;
-	const gchar count_fmt[] = "%04" G_GSIZE_FORMAT;
+	const gint count_max = 999;
+	const gchar count_fmt[] = "%03d";
 	const gchar name_sep[] = "-";
 
 	GFile *file;
 	GFileOutputStream *file_stream;
-	gsize count;
-	gchar *date_time_str, *count_str, *filename;
+	gint count;
+	gchar *date_time_str, *count_str;
+	gchar *filename_locale, *filename_utf8, *dirpath_utf8;
 	GDateTime *date_time;
 
 	g_return_val_if_fail( dirpath != NULL, NULL );
@@ -43,10 +44,12 @@ create_temp_file(
 	for( count = 0; count < count_max; ++count )
 	{
 		count_str = g_strdup_printf( count_fmt, count );
-		filename = g_strjoin( name_sep, PROGRAM_NAME, date_time_str, count_str, NULL );
+		filename_utf8 = g_strjoin( name_sep, PROGRAM_NAME, date_time_str, count_str, NULL );
 		g_free( count_str );
-		file = g_file_new_build_filename( dirpath, filename, NULL );
-		g_free( filename );
+		filename_locale = g_filename_from_utf8( filename_utf8, -1, NULL, NULL, NULL );
+		g_free( filename_utf8 );
+		file = g_file_new_build_filename( dirpath, filename_locale, NULL );
+		g_free( filename_locale );
 
 		file_stream = g_file_create( file, G_FILE_CREATE_PRIVATE, NULL, NULL );
 		if( file_stream != NULL )
@@ -62,11 +65,13 @@ create_temp_file(
 
 	if( count == count_max )
 	{
+		dirpath_utf8 = g_filename_to_utf8( dirpath, -1, NULL, NULL, NULL );
 		g_set_error( error,
 			EDMV_ERROR,
 			EDMV_ERROR_CANNOT_CREATE_TMP_FILE,
 			"Cannot create a temporary file in directory \'%s\'",
-			dirpath );
+			dirpath_utf8 );
+		g_free( dirpath_utf8 );
 		return NULL;
 	}
 
@@ -79,17 +84,28 @@ write_filepaths_to_tmp_file(
 	GFile *tmp_file,
 	GError **error )
 {
+	GStrv filepaths_utf8;
+	guint i, filepaths_len;
+	gsize s_locale_len;
 	gchar *s_utf8, *s_locale;
 	GError *loc_error = NULL;
 
 	g_return_if_fail( filepaths != NULL );
 	g_return_if_fail( G_IS_FILE( tmp_file ) );
 
-	/* join strings and convert UTF-8 to locale */
-	s_locale = g_strjoinv( TEXT_FILE_LINE_BREAKER, filepaths );
-	s_utf8 = g_strconcat( s_locale, TEXT_FILE_LINE_BREAKER, NULL );
+	/* join strings and convert to locale */
+	filepaths_len = g_strv_length( filepaths );
+	filepaths_utf8 = g_new( gchar*, filepaths_len * sizeof( gchar* ) );
+	for( i = 0; i < filepaths_len; ++i )
+		filepaths_utf8[i] = g_filename_to_utf8( filepaths[i], -1, NULL, NULL, NULL );
+	filepaths_utf8[filepaths_len] = NULL;
+
+	s_locale = g_strjoinv( PROGRAM_LINE_BREAKER, filepaths_utf8 );
+	g_strfreev( filepaths_utf8 );
+	s_utf8 = g_strconcat( s_locale, PROGRAM_LINE_BREAKER, NULL );
 	g_free( s_locale );
-	s_locale = g_locale_from_utf8( s_utf8, -1, NULL, NULL, &loc_error );
+
+	s_locale = g_locale_from_utf8( s_utf8, -1, NULL, &s_locale_len, &loc_error );
 	g_free( s_utf8 );
 	if( loc_error != NULL )
 	{
@@ -99,7 +115,7 @@ write_filepaths_to_tmp_file(
 	}
 
 	/* place text to the file */
-	g_file_replace_contents( tmp_file, s_locale, strlen( s_locale ), NULL, FALSE, G_FILE_CREATE_PRIVATE, NULL, NULL, &loc_error );
+	g_file_replace_contents( tmp_file, s_locale, s_locale_len, NULL, FALSE, G_FILE_CREATE_PRIVATE, NULL, NULL, &loc_error );
 	g_free( s_locale );
 	if( loc_error != NULL )
 	{
@@ -152,46 +168,51 @@ get_output_filepaths(
 	GError **error )
 {
 	gchar *s_utf8, *s_locale;
-	guint last_idx;
-	GStrv filepaths;
+	gsize s_locale_len;
+	guint last_idx, i, filepaths_utf8_len;
+	GStrv filepaths_utf8, filepaths_locale;
 	GError *loc_error = NULL;
 
 	g_return_val_if_fail( G_IS_FILE( tmp_file ), NULL );
 
 	/* get file content */
-	g_file_load_contents( tmp_file, NULL, &s_locale, NULL, NULL, &loc_error );
+	g_file_load_contents( tmp_file, NULL, &s_locale, &s_locale_len, NULL, &loc_error );
 	if( loc_error != NULL )
 	{
 		g_propagate_error( error, loc_error );
 		return NULL;
 	}
 
-	/* convert encondings */
-	if( !g_utf8_validate( s_locale, -1, NULL ) )
+	/* convert enconding */
+	s_utf8 = g_locale_to_utf8( s_locale, s_locale_len, NULL, NULL, &loc_error );
+	g_free( s_locale );
+	if( loc_error != NULL )
 	{
-		s_utf8 = g_locale_to_utf8( s_locale, -1, NULL, NULL, &loc_error );
-		g_free( s_locale );
-		if( loc_error != NULL )
-		{
-			g_propagate_error( error, loc_error );
-			return NULL;
-		}
+		g_propagate_error( error, loc_error );
+		return NULL;
 	}
-	else
-		s_utf8 = s_locale;
 
 	/* setup string array */
-	filepaths = g_strsplit( s_utf8, TEXT_FILE_LINE_BREAKER, -1 );
+	filepaths_utf8 = g_strsplit( s_utf8, PROGRAM_LINE_BREAKER, -1 );
 	g_free( s_utf8 );
+
 	/* the last string may be zero-length, removing it */
-	last_idx = g_strv_length( filepaths ) - 1;
-	if( strlen( filepaths[last_idx] ) == 0 )
+	last_idx = g_strv_length( filepaths_utf8 ) - 1;
+	if( strlen( filepaths_utf8[last_idx] ) == 0 )
 	{
-		g_free( filepaths[last_idx] );
-		filepaths[last_idx] = NULL;
+		g_free( filepaths_utf8[last_idx] );
+		filepaths_utf8[last_idx] = NULL;
 	}
 
-	return filepaths;
+	/* convert enconding */
+	filepaths_utf8_len = g_strv_length( filepaths_utf8 );
+	filepaths_locale = g_new( gchar*, filepaths_utf8_len * sizeof( gchar* ) );
+	for( i = 0; i < filepaths_utf8_len; ++i )
+		filepaths_locale[i] = g_filename_from_utf8( filepaths_utf8[i], -1, NULL, NULL, NULL );
+	filepaths_locale[filepaths_utf8_len] = NULL;
+	g_strfreev( filepaths_utf8 );
+
+	return filepaths_locale;
 }
 
 static void

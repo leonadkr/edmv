@@ -38,19 +38,27 @@ edmv_application_init(
 {
 	const GOptionEntry option_entries[]=
 	{
-		{ "editor", 'e', G_OPTION_FLAG_NONE, G_OPTION_ARG_STRING, NULL, "Editor to use", "EDITOR" },
+		{ "editor", 'e', G_OPTION_FLAG_NONE, G_OPTION_ARG_FILENAME, NULL, "Editor to use", "EDITOR" },
 		{ NULL }
 	};
 
-	gchar *summary;
+	gchar *program_name, *program_config_filename;
+	gchar *summary, *config_path;
 
-	self->config_path = g_build_filename( g_get_user_config_dir(), PROGRAM_NAME, CONFIG_FILENAME, NULL );
+	program_name = g_filename_from_utf8( PROGRAM_NAME, -1, NULL, NULL, NULL );
+	program_config_filename = g_filename_from_utf8( PROGRAM_CONFIGURE_FILE, -1, NULL, NULL, NULL );
 
+	self->config_path = g_build_filename( g_get_user_config_dir(), program_name, program_config_filename, NULL );
+	g_free( program_name );
+	g_free( program_config_filename );
+
+	config_path = g_filename_to_utf8( self->config_path, -1, NULL, NULL, NULL );
 	summary = g_strdup_printf(
-		"This program renames FILES with an external editor." TEXT_FILE_LINE_BREAKER
-		"Be aware of entering \'.\' and \'..\' in the input, it may cause an uncertain behavior." TEXT_FILE_LINE_BREAKER
+		"This program renames FILES with an external editor." PROGRAM_LINE_BREAKER
+		"Be aware of entering \'.\' and \'..\' in the input, it may cause an uncertain behavior." PROGRAM_LINE_BREAKER
 		"Argument EDITOR, option in \'%s\', value of $VISUAL or $EDITOR in this order determine the editor.",
-		self->config_path );
+		config_path );
+	g_free( config_path );
 
 	g_application_set_option_context_parameter_string( G_APPLICATION( self ), "FILES" );
 	g_application_set_option_context_description( G_APPLICATION( self ), PROGRAM_NAME" version "PROGRAM_VERSION );
@@ -108,47 +116,24 @@ edmv_application_command_line(
 	gchar *editor = NULL;
 	GKeyFile *key_file;
 	GStrv argv;
-	gint argc, i;
-	gchar *s_locale, *s_utf8;
-	GError *error = NULL;
+	gint argc;
 
-	options = g_application_command_line_get_options_dict( command_line );
-
-	/* get input options */
-	g_variant_dict_lookup( options, "editor", "s", &editor );
-
-	/* get input, convert strings from current locale to UTF-8 */
+	/* store inputs */
 	argv = g_application_command_line_get_arguments( command_line, &argc );
+	/* no inputs -- do nothing */
 	if( argc < 2 )
 	{
 		g_free( editor );
 		g_strfreev( argv );
 		return EXIT_SUCCESS;
 	}
-	for( i = 1; i < argc; ++i )
-	{
-		s_locale = argv[i];
-		if( !g_utf8_validate( s_locale, -1, NULL ) )
-		{
-			s_utf8 = g_locale_to_utf8( s_locale, -1, NULL, NULL, &error );
-			if( error != NULL )
-			{
-				g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
-					"MESSAGE", error->message,
-					NULL );
-				g_clear_error( &error );
-				g_free( editor );
-				g_strfreev( argv );
-				return EXIT_FAILURE;
-			}
-
-			g_free( s_locale );
-			argv[i] = s_utf8;
-		}
-	}
 	self->inputs = g_memdup2( argv + 1, argc * sizeof( gchar* ) );
 	g_free( argv[0] );
 	g_free( argv );
+
+	/* get input option */
+	options = g_application_command_line_get_options_dict( command_line );
+	g_variant_dict_lookup( options, "editor", "^ay", &editor );
 
 	/* try environment variables */
 	if( editor == NULL )
@@ -159,13 +144,13 @@ edmv_application_command_line(
 	}
 
 	/* parse configure file */
-	key_file = g_key_file_new();
-	if( !g_key_file_load_from_file( key_file, self->config_path, G_KEY_FILE_NONE, NULL ) )
+	if( editor == NULL )
 	{
-		if( editor == NULL )
-			editor = g_key_file_get_string( key_file, "Main", "editor", NULL );
+		key_file = g_key_file_new();
+		if( !g_key_file_load_from_file( key_file, self->config_path, G_KEY_FILE_NONE, NULL ) )
+				editor = g_key_file_get_string( key_file, "Main", "editor", NULL );
+		g_key_file_free( key_file );
 	}
-	g_key_file_free( key_file );
 
 	g_free( self->editor );
 	self->editor = editor;
