@@ -113,7 +113,7 @@ edmv_application_command_line(
 {
 	EdmvApplication *self = EDMV_APPLICATION( app );
 	GVariantDict *options;
-	gchar *editor = NULL;
+	gchar *editor = NULL, *s;
 	GKeyFile *key_file;
 	GStrv argv;
 	gint argc;
@@ -135,21 +135,25 @@ edmv_application_command_line(
 	options = g_application_command_line_get_options_dict( command_line );
 	g_variant_dict_lookup( options, "editor", "^ay", &editor );
 
+	/* parse configure file */
+	if( editor == NULL )
+	{
+		key_file = g_key_file_new();
+		if( g_key_file_load_from_file( key_file, self->config_path, G_KEY_FILE_NONE, NULL ) )
+		{
+				s = g_key_file_get_string( key_file, "Main", "editor", NULL );
+				editor = g_filename_from_utf8( s, -1, NULL, NULL, NULL );
+				g_free( s );
+		}
+		g_key_file_free( key_file );
+	}
+
 	/* try environment variables */
 	if( editor == NULL )
 	{
 		editor = g_strdup( g_getenv( "VISUAL" ) );
 		if( editor == NULL )
 			editor = g_strdup( g_getenv( "EDITOR" ) );
-	}
-
-	/* parse configure file */
-	if( editor == NULL )
-	{
-		key_file = g_key_file_new();
-		if( !g_key_file_load_from_file( key_file, self->config_path, G_KEY_FILE_NONE, NULL ) )
-				editor = g_key_file_get_string( key_file, "Main", "editor", NULL );
-		g_key_file_free( key_file );
 	}
 
 	g_free( self->editor );

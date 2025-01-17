@@ -347,12 +347,12 @@ on_app_activate(
 
 	/* cannot proceed with no editor */
 	editor = edmv_application_get_editor( self );
-	if( editor == NULL )
+	if( editor == NULL || strlen( editor ) == 0 )
 	{
 		g_log_structured( PROGRAM_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
 			"MESSAGE", "Editor is not set",
 			NULL );
-		return;
+		goto out1;
 	}
 
 	/* no inputs -- do nothing */
