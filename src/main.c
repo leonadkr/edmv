@@ -452,7 +452,7 @@ main(
 
 	setlocale( LC_ALL, "" );
 
-	app = edmv_application_new( APP_ID );
+	app = edmv_application_new( PROGRAM_APP_ID );
 	if( app == NULL )
 		return EXIT_FAILURE;
 
