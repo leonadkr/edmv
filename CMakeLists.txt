@@ -4,7 +4,7 @@ project( edmv VERSION 1.1.4 )
 
 set( PROGRAM_NAME ${CMAKE_PROJECT_NAME} )
 set( PROGRAM_VERSION ${CMAKE_PROJECT_VERSION} )
-set( PROGRAM_APP_ID "com.gmail.leonadkr.edmv" )
+set( PROGRAM_APP_ID "com.github.leonadkr.edmv" )
 set( PROGRAM_AUTHOR "leonadkr@gmail.com" )
 
 set( PROGRAM_CONFIGURE_FILE "config" )
