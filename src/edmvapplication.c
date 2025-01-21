@@ -123,7 +123,6 @@ edmv_application_command_line(
 	/* no inputs -- do nothing */
 	if( argc < 2 )
 	{
-		g_free( editor );
 		g_strfreev( argv );
 		return EXIT_SUCCESS;
 	}
@@ -142,8 +141,11 @@ edmv_application_command_line(
 		if( g_key_file_load_from_file( key_file, self->config_path, G_KEY_FILE_NONE, NULL ) )
 		{
 				s = g_key_file_get_string( key_file, "Main", "editor", NULL );
-				editor = g_filename_from_utf8( s, -1, NULL, NULL, NULL );
-				g_free( s );
+				if( s != NULL )
+				{
+					editor = g_filename_from_utf8( s, -1, NULL, NULL, NULL );
+					g_free( s );
+				}
 		}
 		g_key_file_free( key_file );
 	}
