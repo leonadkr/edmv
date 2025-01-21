@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.16 )
 
-project( edmv VERSION 1.1.4 )
+project( edmv VERSION 1.1.5 )
 
 set( PROGRAM_NAME ${CMAKE_PROJECT_NAME} )
 set( PROGRAM_VERSION ${CMAKE_PROJECT_VERSION} )
