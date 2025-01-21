@@ -9,7 +9,10 @@
 
 enum _EdmvError
 {
-	EDMV_ERROR_CANNOT_CREATE_TMP_FILE
+	EDMV_ERROR_CANNOT_CREATE_TMP_FILE,
+	EDMV_ERROR_CANNOT_GET_PATH_TO_TMP_FILE,
+	EDMV_ERROR_CANNOT_GET_PARENT_DIR,
+	EDMV_ERROR_CANNOT_GET_PATH_TO_PARENT_DIR,
 };
 typedef enum _EdmvError EdmvError;
 
@@ -158,6 +161,15 @@ system_call(
 	g_return_if_fail( G_IS_FILE( tmp_file ) );
 
 	filepath = g_file_get_path( tmp_file );
+	if( filepath == NULL )
+	{
+		g_set_error( error,
+			EDMV_ERROR,
+			EDMV_ERROR_CANNOT_GET_PATH_TO_TMP_FILE,
+			"Cannot get path to the temporary file" );
+		return;
+	}
+
 	subproc = g_subprocess_new(
 		G_SUBPROCESS_FLAGS_STDIN_INHERIT,
 		&loc_error,
@@ -281,8 +293,30 @@ move_files_by_filepaths(
 
 		/* create temporary file to prevent collisions */
 		dir = g_file_get_parent( input_file );
+		if( dir == NULL )
+		{
+			g_set_error( error,
+				EDMV_ERROR,
+				EDMV_ERROR_CANNOT_GET_PARENT_DIR,
+				"Cannot get the parent directory" );
+			g_object_unref( G_OBJECT( input_file ) );
+			g_object_unref( G_OBJECT( output_file ) );
+			goto out1;
+		}
+
 		dirpath = g_file_get_path( dir );
 		g_object_unref( G_OBJECT( dir ) );
+		if( dirpath == NULL )
+		{
+			g_set_error( error,
+				EDMV_ERROR,
+				EDMV_ERROR_CANNOT_GET_PATH_TO_PARENT_DIR,
+				"Cannot get path to the parent directory" );
+			g_object_unref( G_OBJECT( input_file ) );
+			g_object_unref( G_OBJECT( output_file ) );
+			goto out1;
+		}
+
 		tmp_file = create_temp_file( dirpath, &loc_error );
 		g_free( dirpath );
 		if( loc_error != NULL )
