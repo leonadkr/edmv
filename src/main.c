@@ -34,6 +34,7 @@ create_temp_file(
 	gchar *date_time_str, *count_str;
 	gchar *filename_locale, *filename_utf8, *dirpath_utf8;
 	GDateTime *date_time;
+	GError *loc_error = NULL;
 
 	g_return_val_if_fail( dirpath != NULL, NULL );
 
@@ -46,8 +47,15 @@ create_temp_file(
 		count_str = g_strdup_printf( count_fmt, count );
 		filename_utf8 = g_strjoin( name_sep, PROGRAM_NAME, date_time_str, count_str, NULL );
 		g_free( count_str );
-		filename_locale = g_filename_from_utf8( filename_utf8, -1, NULL, NULL, NULL );
+		filename_locale = g_filename_from_utf8( filename_utf8, -1, NULL, NULL, &loc_error );
 		g_free( filename_utf8 );
+		if( loc_error != NULL )
+		{
+			g_propagate_error( error, loc_error );
+			g_free( date_time_str );
+			return NULL;
+		}
+
 		file = g_file_new_build_filename( dirpath, filename_locale, NULL );
 		g_free( filename_locale );
 
@@ -65,11 +73,16 @@ create_temp_file(
 
 	if( count == count_max )
 	{
-		dirpath_utf8 = g_filename_to_utf8( dirpath, -1, NULL, NULL, NULL );
+		dirpath_utf8 = g_filename_to_utf8( dirpath, -1, NULL, NULL, &loc_error );
+		if( loc_error != NULL )
+		{
+			g_propagate_error( error, loc_error );
+			return NULL;
+		}
 		g_set_error( error,
 			EDMV_ERROR,
 			EDMV_ERROR_CANNOT_CREATE_TMP_FILE,
-			"Cannot create a temporary file in directory \'%s\'",
+			"Cannot create a temporary file in directory \"%s\"",
 			dirpath_utf8 );
 		g_free( dirpath_utf8 );
 		return NULL;
@@ -97,7 +110,15 @@ write_filepaths_to_tmp_file(
 	filepaths_len = g_strv_length( filepaths );
 	filepaths_utf8 = g_new( gchar*, filepaths_len * sizeof( gchar* ) );
 	for( i = 0; i < filepaths_len; ++i )
-		filepaths_utf8[i] = g_filename_to_utf8( filepaths[i], -1, NULL, NULL, NULL );
+	{
+		filepaths_utf8[i] = g_filename_to_utf8( filepaths[i], -1, NULL, NULL, &loc_error );
+		if( loc_error != NULL )
+		{
+			g_propagate_error( error, loc_error );
+			g_strfreev( filepaths_utf8 );
+			return;
+		}
+	}
 	filepaths_utf8[filepaths_len] = NULL;
 
 	s_locale = g_strjoinv( PROGRAM_LINE_BREAKER, filepaths_utf8 );
@@ -110,7 +131,6 @@ write_filepaths_to_tmp_file(
 	if( loc_error != NULL )
 	{
 		g_propagate_error( error, loc_error );
-		g_free( s_locale );
 		return;
 	}
 
@@ -208,7 +228,16 @@ get_output_filepaths(
 	filepaths_utf8_len = g_strv_length( filepaths_utf8 );
 	filepaths_locale = g_new( gchar*, filepaths_utf8_len * sizeof( gchar* ) );
 	for( i = 0; i < filepaths_utf8_len; ++i )
-		filepaths_locale[i] = g_filename_from_utf8( filepaths_utf8[i], -1, NULL, NULL, NULL );
+	{
+		filepaths_locale[i] = g_filename_from_utf8( filepaths_utf8[i], -1, NULL, NULL, &loc_error );
+		if( loc_error != NULL )
+		{
+			g_propagate_error( error, loc_error );
+			g_strfreev( filepaths_locale );
+			g_strfreev( filepaths_utf8 );
+			return NULL;
+		}
+	}
 	filepaths_locale[filepaths_utf8_len] = NULL;
 	g_strfreev( filepaths_utf8 );
 
