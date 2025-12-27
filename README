@@ -10,7 +10,8 @@ Be aware: the program overwrites the files!
 The program uses glib, also you need cmake to build it.
 
 To build:
-cmake -S edmv -B /tmp/edmv/release -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_TOOLCHAIN_FILE=GlibToolChain.cmake
+cmake -S edmv -B edmv/build --preset release
+cmake --build edmv/build
 
 To install:
-DESTDIR=$HOME/.local cmake --build /tmp/edmv/release --config Release --target install/strip
+cmake --install edmv/build --prefix edmv/install

@@ -1,0 +1,41 @@
+{
+	"version": 10,
+	"cmakeMinimumRequired": {
+		"major": 4
+	},
+	"configurePresets": [
+		{
+			"name": "base",
+			"generator": "Ninja",
+			"hidden": true,
+			"toolchainFile": "GlibToolChain.cmake"
+		},
+		{
+			"name": "default",
+			"displayName": "RelWithDebInfo",
+			"description": "Enables optimization and debug information",
+			"inherits": ["base"],
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		},
+		{
+			"name": "debug",
+			"displayName": "Debug",
+			"description": "Enables debug information, no optimization",
+			"inherits": ["base"],
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "release",
+			"displayName": "Release",
+			"description": "Enables optimization, no debug information",
+			"inherits": ["base"],
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		}
+	]
+}

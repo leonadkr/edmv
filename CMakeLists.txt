@@ -1,9 +1,9 @@
-cmake_minimum_required( VERSION 3.16 )
+cmake_minimum_required( VERSION 4.1 )
 
 project( edmv VERSION 1.1.5 )
 
-set( PROGRAM_NAME ${CMAKE_PROJECT_NAME} )
-set( PROGRAM_VERSION ${CMAKE_PROJECT_VERSION} )
+set( PROGRAM_NAME ${PROJECT_NAME} )
+set( PROGRAM_VERSION ${PROJECT_VERSION} )
 set( PROGRAM_APP_ID "com.github.leonadkr.edmv" )
 set( PROGRAM_AUTHOR "leonadkr@gmail.com" )
 
